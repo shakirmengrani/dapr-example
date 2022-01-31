@@ -2,7 +2,6 @@
   "version": 2,
   "projects": {
     "api": "apps/api",
-    "awesome": "apps/awesome",
-    "awesome-e2e": "apps/awesome-e2e"
+    "process": "apps/process"
   }
 }
