@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json yarn.lock /app/
 RUN yarn
 COPY . .
+RUN go get github.com/dapr/go-sdk/client
 RUN yarn nx build process
 
 FROM shakirmengrani/nx-builder as final
