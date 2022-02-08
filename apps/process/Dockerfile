@@ -1,9 +1,14 @@
-FROM node:lts-alpine
+FROM shakirmengrani/nx-builder as builder
+ENV PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 WORKDIR /app
-COPY ./dist/apps/process .
+COPY package.json yarn.lock /app/
+RUN yarn
+COPY . .
+RUN yarn nx build process
+
+FROM shakirmengrani/nx-builder as final
+COPY --from=builder /app/dist/apps/process /app/process
+# COPY ./dist/apps/process /app/process
 ENV PORT=3333
 EXPOSE ${PORT}
-RUN yarn
-# dependencies that nestjs needs
-RUN yarn add reflect-metadata tslib rxjs @nestjs/platform-express
-CMD node ./main.js
+CMD /app/process

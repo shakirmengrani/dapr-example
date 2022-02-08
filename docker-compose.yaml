@@ -1,24 +1,56 @@
 version: '3.7'
 services:
-
+#####################################################################
+# Infra                                                             #
+#####################################################################
+  placement:
+    image: daprio/dapr:1.6.0
+    command: ['./placement', '-port', '50006']
+    ports:
+      - '50006'
   zipkin:
     container_name: "zipkin_service"
     image: "openzipkin/zipkin"
     ports:
       - 8080:9411
-  
+
+  redis:
+    container_name: "redis_service"
+    image: "redis"
+    command: ["redis-server"]
+    ports:
+      - "6379"
+    depends_on:
+      - placement
+
+#####################################################################
+# Application                                                       #
+#####################################################################
+  nodered:
+    image: "nodered/node-red"
+    ports:
+      - "1880:1880"
+
+  gotify:
+    image: "gotify/server"
+    ports:
+      - "8081:80"
+
   api:
     image: dapr-awesomeapi
     container_name: awesome_api
     ports:
-      - "3333:3333"
+      - "3333"
 
   process:
     image: dapr-awesomeprocess
     container_name: awesome_process
     ports:
-      - "3331:3333"
+      - "3333"
 
+#####################################################################
+# Dapr                                                              #
+#####################################################################
   api_dapr:
     image: daprio/dapr:1.6.0
     command:
@@ -28,6 +60,8 @@ services:
         "api",
         "-app-port",
         "3333",
+        '-placement-host-address',
+        'placement:50006',
         "-config",
         "/dapr/config.yaml",
         "-components-path",
@@ -37,6 +71,7 @@ services:
       - "./components:/dapr"
     depends_on:
       - api
+      - placement
     network_mode: "service:api"
 
   process_dapr:
@@ -48,6 +83,8 @@ services:
         "process",
         "-app-port",
         "3333",
+        '-placement-host-address',
+        'placement:50006',
         "-config",
         "/dapr/config.yaml",
         "-components-path",
@@ -57,7 +94,53 @@ services:
       - "./components:/dapr"
     depends_on:
       - process
+      - placement
     network_mode: "service:process"
+
+  nodered_dapr:
+    image: daprio/dapr:1.6.0
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "nodered",
+        "-app-port",
+        "1880",
+        '-placement-host-address',
+        'placement:50006',
+        "-config",
+        "/dapr/config.yaml",
+        "-components-path",
+        "/dapr/local"
+      ]
+    volumes:
+      - "./components:/dapr"
+    depends_on:
+      - nodered
+      - placement
+    network_mode: "service:nodered"
+  gotify_dapr:
+    image: daprio/dapr:1.6.0
+    command:
+      [
+        "./daprd",
+        "-app-id",
+        "gotify",
+        "-app-port",
+        "80",
+        '-placement-host-address',
+        'placement:50006',
+        "-config",
+        "/dapr/config.yaml",
+        "-components-path",
+        "/dapr/local"
+      ]
+    volumes:
+      - "./components:/dapr"
+    depends_on:
+      - gotify
+      - placement
+    network_mode: "service:gotify"
 networks:
   default:
     external:
